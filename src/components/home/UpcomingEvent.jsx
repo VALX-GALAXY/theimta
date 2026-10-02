@@ -1,6 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowUpRight, CalendarDays, Image as ImageIcon, Video } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  CalendarDays,
+  Image as ImageIcon,
+  Video,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ROUTES } from '@/constants/routes'
@@ -38,45 +45,90 @@ function MediaPlaceholder({ kind, label }) {
   )
 }
 
-function EventPhoto({ photo, index }) {
-  const [available, setAvailable] = useState(true)
+function EventMediaCarousel() {
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [unavailablePhotos, setUnavailablePhotos] = useState([])
+  const [videoAvailable, setVideoAvailable] = useState(true)
+  const photoCount = UPCOMING_EVENT.media.photos.length
+  const isVideo = activeIndex === photoCount
+
+  useEffect(() => {
+    if (isVideo && videoAvailable) return undefined
+
+    const timeout = window.setTimeout(() => {
+      setActiveIndex((index) => (index + 1) % (photoCount + 1))
+    }, 10_000)
+
+    return () => window.clearTimeout(timeout)
+  }, [activeIndex, isVideo, photoCount, videoAvailable])
+
+  function goToMedia(index) {
+    setActiveIndex((index + photoCount + 1) % (photoCount + 1))
+  }
+
+  const currentPhoto = UPCOMING_EVENT.media.photos[activeIndex]
 
   return (
-    <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-gold/15 bg-highlight shadow-surface">
-      {available ? (
-        <img
-          src={photo.src}
-          alt={photo.alt}
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
-          loading="lazy"
-          onError={() => setAvailable(false)}
-        />
-      ) : (
-        <MediaPlaceholder kind="image" label={`Event photo ${index} will appear here`} />
-      )}
-    </div>
-  )
-}
+    <div>
+      <div className="relative aspect-video overflow-hidden rounded-2xl border border-gold/15 bg-highlight shadow-surface-lg">
+        {isVideo ? (
+          videoAvailable ? (
+            <video
+              key="upcoming-event-video"
+              className="size-full bg-ink object-contain"
+              autoPlay
+              controls
+              muted
+              playsInline
+              preload="metadata"
+              aria-label="Upcoming IMTA event video"
+              onEnded={() => setActiveIndex(0)}
+              onError={() => setVideoAvailable(false)}
+            >
+              <source src={UPCOMING_EVENT.media.video} type="video/mp4" />
+            </video>
+          ) : (
+            <MediaPlaceholder kind="video" label="Event video is not available yet" />
+          )
+        ) : unavailablePhotos.includes(activeIndex) ? (
+          <MediaPlaceholder kind="image" label={`Event photo ${activeIndex + 1} is not available yet`} />
+        ) : (
+          <img
+            key={currentPhoto.src}
+            src={currentPhoto.src}
+            alt={currentPhoto.alt}
+            className="size-full object-cover transition-transform duration-500 hover:scale-[1.015]"
+            loading="lazy"
+            onError={() =>
+              setUnavailablePhotos((photos) => [...new Set([...photos, activeIndex])])
+            }
+          />
+        )}
+      </div>
 
-function EventVideo() {
-  const [available, setAvailable] = useState(true)
-
-  return (
-    <div className="relative aspect-video overflow-hidden rounded-2xl border border-gold/15 bg-highlight shadow-surface-lg">
-      {available ? (
-        <video
-          className="size-full bg-ink object-contain"
-          controls
-          playsInline
-          preload="metadata"
-          aria-label="Upcoming IMTA event video"
-          onError={() => setAvailable(false)}
-        >
-          <source src={UPCOMING_EVENT.media.video} type="video/mp4" />
-        </video>
-      ) : (
-        <MediaPlaceholder kind="video" label="Event video will appear here" />
-      )}
+      <div className="mt-4 flex items-center justify-between gap-4">
+        <p className="text-sm font-medium text-earth" aria-live="polite">
+          {isVideo ? 'Event video' : `Event photo ${activeIndex + 1}`} of {photoCount + 1}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => goToMedia(activeIndex - 1)}
+            aria-label="Previous event media"
+            className="flex size-10 items-center justify-center rounded-full border border-gold/20 bg-surface text-ink transition-colors hover:bg-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => goToMedia(activeIndex + 1)}
+            aria-label="Next event media"
+            className="flex size-10 items-center justify-center rounded-full border border-gold/20 bg-surface text-ink transition-colors hover:bg-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+          >
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -122,12 +174,7 @@ export function UpcomingEvent({ detailsHref = ROUTES.events }) {
           viewport={{ once: true, amount: 0.12 }}
           transition={{ duration: 0.5, delay: 0.08 }}
         >
-          <EventVideo />
-          <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {UPCOMING_EVENT.media.photos.map((photo, index) => (
-              <EventPhoto key={photo.src} photo={photo} index={index + 1} />
-            ))}
-          </div>
+          <EventMediaCarousel />
         </motion.div>
       </div>
     </section>
