@@ -10,6 +10,14 @@ const worldConference2026Thumb = publicAsset('8th World Conference.jpeg')
  */
 export const announcements = [
   {
+    id: 'imta-beginner-programme-november-2026',
+    title: 'IMTA Beginner Programme',
+    description:
+      'Special online music therapy classes for beginners, 25–29 November 2026, 6–9 PM.',
+    image: publicAsset('events/25 - 29 nov 2026.jpeg'),
+    href: ROUTES.onlineProgramme,
+  },
+  {
     id: 'world-conference-2026',
     title: '9th World Music Therapy Conference',
     description: 'Trivandrum, Kerala — December 4–6, 2026. Poster from 1 July 2026.',

@@ -64,9 +64,13 @@ function EventMediaCarousel() {
   }
 
   useEffect(() => {
-    if (isVideo || !videoAvailable) return undefined
+    if (!videoAvailable) return undefined
 
     const timeout = window.setTimeout(() => {
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause()
+      }
+
       setActiveIndex((index) => (index + 1) % mediaCount)
     }, 10_000)
 
@@ -75,6 +79,10 @@ function EventMediaCarousel() {
 
   function goToMedia(index) {
     const nextIndex = (index + mediaCount) % mediaCount
+
+    if (videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause()
+    }
 
     if (nextIndex === photoCount) {
       pauseBackgroundAudio()
@@ -87,7 +95,7 @@ function EventMediaCarousel() {
 
   return (
     <div>
-      <div className="relative aspect-video overflow-hidden rounded-2xl border border-gold/15 bg-highlight shadow-surface-lg">
+      <div className="relative flex h-[min(72svh,640px)] w-full items-center justify-center overflow-hidden rounded-2xl border border-gold/15 bg-highlight shadow-surface-lg sm:aspect-video sm:h-auto">
         {isVideo ? (
           videoAvailable ? (
             <video

@@ -101,6 +101,33 @@ export function SiteBackgroundAudio() {
       }
     }
 
+    const syncAudioWithVideoPlayback = () => {
+      const hasPlayingVideo = Array.from(document.querySelectorAll('video')).some(
+        (video) => !video.paused && !video.ended && video.currentTime > 0,
+      )
+
+      if (hasPlayingVideo) {
+        pause()
+        return
+      }
+
+      if (isHome && document.visibilityState === 'visible') {
+        void resume()
+      }
+    }
+
+    const handleVideoPlay = (event) => {
+      if (event.target instanceof HTMLVideoElement) {
+        pause()
+      }
+    }
+
+    const handleVideoPauseOrEnd = (event) => {
+      if (event.target instanceof HTMLVideoElement) {
+        syncAudioWithVideoPlayback()
+      }
+    }
+
     void tryPlay()
     const retryId = window.setTimeout(() => void tryPlay(), 250)
     const retryId2 = window.setTimeout(() => void tryPlay(), 1000)
@@ -117,6 +144,9 @@ export function SiteBackgroundAudio() {
     audio.addEventListener('loadeddata', onReady)
     window.addEventListener('imta-pause-site-audio', onPauseAudio)
     window.addEventListener('imta-resume-site-audio', onResumeAudio)
+    document.addEventListener('play', handleVideoPlay, true)
+    document.addEventListener('pause', handleVideoPauseOrEnd, true)
+    document.addEventListener('ended', handleVideoPauseOrEnd, true)
 
     for (const event of interactionEvents) {
       document.addEventListener(event, unlockAndPlay, { passive: true })
@@ -130,6 +160,9 @@ export function SiteBackgroundAudio() {
       audio.removeEventListener('loadeddata', onReady)
       window.removeEventListener('imta-pause-site-audio', onPauseAudio)
       window.removeEventListener('imta-resume-site-audio', onResumeAudio)
+      document.removeEventListener('play', handleVideoPlay, true)
+      document.removeEventListener('pause', handleVideoPauseOrEnd, true)
+      document.removeEventListener('ended', handleVideoPauseOrEnd, true)
       detachUnlockListeners()
       document.removeEventListener('visibilitychange', onVisible)
       pause()
