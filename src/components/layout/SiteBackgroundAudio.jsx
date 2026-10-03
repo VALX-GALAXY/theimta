@@ -30,6 +30,18 @@ export function SiteBackgroundAudio() {
       playingRef.current = false
     }
 
+    const resume = async () => {
+      if (!isHome) return
+      try {
+        if (audio.paused) {
+          await audio.play()
+        }
+        playingRef.current = true
+      } catch {
+        playingRef.current = false
+      }
+    }
+
     if (!isHome) {
       pause()
       return
@@ -77,7 +89,16 @@ export function SiteBackgroundAudio() {
       } else {
         pause()
       }
+    }
 
+    const onPauseAudio = () => {
+      pause()
+    }
+
+    const onResumeAudio = () => {
+      if (isHome) {
+        void resume()
+      }
     }
 
     void tryPlay()
@@ -94,6 +115,8 @@ export function SiteBackgroundAudio() {
 
     audio.addEventListener('canplaythrough', onReady)
     audio.addEventListener('loadeddata', onReady)
+    window.addEventListener('imta-pause-site-audio', onPauseAudio)
+    window.addEventListener('imta-resume-site-audio', onResumeAudio)
 
     for (const event of interactionEvents) {
       document.addEventListener(event, unlockAndPlay, { passive: true })
@@ -105,6 +128,8 @@ export function SiteBackgroundAudio() {
       window.clearTimeout(retryId2)
       audio.removeEventListener('canplaythrough', onReady)
       audio.removeEventListener('loadeddata', onReady)
+      window.removeEventListener('imta-pause-site-audio', onPauseAudio)
+      window.removeEventListener('imta-resume-site-audio', onResumeAudio)
       detachUnlockListeners()
       document.removeEventListener('visibilitychange', onVisible)
       pause()

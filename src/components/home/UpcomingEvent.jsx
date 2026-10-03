@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -50,23 +50,40 @@ function EventMediaCarousel() {
   const [unavailablePhotos, setUnavailablePhotos] = useState([])
   const [videoAvailable, setVideoAvailable] = useState(true)
   const photoCount = UPCOMING_EVENT.media.photos.length
+  const mediaCount = photoCount + 1
   const isVideo = activeIndex === photoCount
+  const currentPhoto = UPCOMING_EVENT.media.photos[activeIndex]
+  const videoRef = useRef(null)
+
+  const pauseBackgroundAudio = () => {
+    window.dispatchEvent(new Event('imta-pause-site-audio'))
+  }
+
+  const resumeBackgroundAudio = () => {
+    window.dispatchEvent(new Event('imta-resume-site-audio'))
+  }
 
   useEffect(() => {
-    if (isVideo && videoAvailable) return undefined
+    if (isVideo || !videoAvailable) return undefined
 
     const timeout = window.setTimeout(() => {
-      setActiveIndex((index) => (index + 1) % (photoCount + 1))
+      setActiveIndex((index) => (index + 1) % mediaCount)
     }, 10_000)
 
     return () => window.clearTimeout(timeout)
-  }, [activeIndex, isVideo, photoCount, videoAvailable])
+  }, [activeIndex, isVideo, mediaCount, videoAvailable])
 
   function goToMedia(index) {
-    setActiveIndex((index + photoCount + 1) % (photoCount + 1))
-  }
+    const nextIndex = (index + mediaCount) % mediaCount
 
-  const currentPhoto = UPCOMING_EVENT.media.photos[activeIndex]
+    if (nextIndex === photoCount) {
+      pauseBackgroundAudio()
+    } else {
+      resumeBackgroundAudio()
+    }
+
+    setActiveIndex(nextIndex)
+  }
 
   return (
     <div>
@@ -74,15 +91,20 @@ function EventMediaCarousel() {
         {isVideo ? (
           videoAvailable ? (
             <video
+              ref={videoRef}
               key="upcoming-event-video"
               className="size-full bg-ink object-contain"
-              autoPlay
               controls
               muted
               playsInline
               preload="metadata"
               aria-label="Upcoming IMTA event video"
-              onEnded={() => setActiveIndex(0)}
+              onPlay={pauseBackgroundAudio}
+              onPause={resumeBackgroundAudio}
+              onEnded={() => {
+                resumeBackgroundAudio()
+                setActiveIndex(0)
+              }}
               onError={() => setVideoAvailable(false)}
             >
               <source src={UPCOMING_EVENT.media.video} type="video/mp4" />
@@ -91,14 +113,18 @@ function EventMediaCarousel() {
             <MediaPlaceholder kind="video" label="Event video is not available yet" />
           )
         ) : unavailablePhotos.includes(activeIndex) ? (
-          <MediaPlaceholder kind="image" label={`Event photo ${activeIndex + 1} is not available yet`} />
+          <MediaPlaceholder
+            kind="image"
+            label={`Event photo ${activeIndex + 1} is not available yet`}
+          />
         ) : (
           <img
             key={currentPhoto.src}
             src={currentPhoto.src}
             alt={currentPhoto.alt}
-            className="size-full object-cover transition-transform duration-500 hover:scale-[1.015]"
+            className="size-full bg-surface object-contain object-center transition-transform duration-500 hover:scale-[1.015]"
             loading="lazy"
+            decoding="async"
             onError={() =>
               setUnavailablePhotos((photos) => [...new Set([...photos, activeIndex])])
             }
@@ -106,10 +132,7 @@ function EventMediaCarousel() {
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-4">
-        <p className="text-sm font-medium text-earth" aria-live="polite">
-          {isVideo ? 'Event video' : `Event photo ${activeIndex + 1}`} of {photoCount + 1}
-        </p>
+      <div className="mt-4 flex items-center justify-end gap-4">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -175,6 +198,70 @@ export function UpcomingEvent({ detailsHref = ROUTES.events }) {
           transition={{ duration: 0.5, delay: 0.08 }}
         >
           <EventMediaCarousel />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.15 }}
+          transition={{ duration: 0.45, delay: 0.12 }}
+          className="mt-8"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-4xl">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold md:text-xs">
+                IMTA Beginner Programme
+              </p>
+              <h3 className="mt-3 font-serif text-3xl font-medium text-ink md:text-[3.15rem] md:leading-[1.05]">
+                Music Therapy — Special Online Classes for Beginners
+              </h3>
+              <p className="mt-3 max-w-4xl text-sm leading-relaxed text-earth md:text-base">
+                Join IMTA’s Special Online Music Therapy Classes for Beginners and learn from
+                certified IMTA faculty. A focused 5-day, 15-hour online programme designed for
+                convenient learning and professional development.
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-white/60 px-4 py-2 text-sm font-medium text-ink shadow-sm">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
+                Certification
+              </span>
+              <span>IMTA</span>
+            </div>
+          </div>
+
+          <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-2xl border border-ink/10 bg-white/70 p-4">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.2em] text-earth">
+                Date
+              </dt>
+              <dd className="mt-2 text-base font-medium text-ink">25–29 November 2026</dd>
+            </div>
+            <div className="rounded-2xl border border-ink/10 bg-white/70 p-4">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.2em] text-earth">
+                Time
+              </dt>
+              <dd className="mt-2 text-base font-medium text-ink">6–9 PM</dd>
+            </div>
+            <div className="rounded-2xl border border-ink/10 bg-white/70 p-4">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.2em] text-earth">
+                Mode
+              </dt>
+              <dd className="mt-2 text-base font-medium text-ink">Online</dd>
+            </div>
+            <div className="rounded-2xl border border-ink/10 bg-white/70 p-4">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.2em] text-earth">
+                Duration
+              </dt>
+              <dd className="mt-2 text-base font-medium text-ink">5 Days / 15 Hours</dd>
+            </div>
+            <div className="rounded-2xl border border-ink/10 bg-white/70 p-4">
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.2em] text-earth">
+                Course Direction
+              </dt>
+              <dd className="mt-2 text-base font-medium text-ink">Dr. T.V. Sairam</dd>
+            </div>
+          </dl>
         </motion.div>
       </div>
     </section>
